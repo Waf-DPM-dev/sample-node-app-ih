@@ -46,8 +46,7 @@ jobs:
           else
             npx --yes jest --ci --passWithNoTests \
               --reporters=default --reporters=jest-junit \
-              --coverage --coverageReporters=lcov,text-summary \
-              --testLocationInResults
+              --coverage --testLocationInResults
           fi
 
       - name: Publish test results to Checks
