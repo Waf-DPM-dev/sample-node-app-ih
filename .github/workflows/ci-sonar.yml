@@ -70,6 +70,7 @@ jobs:
             -Dsonar.tests=tests/
             -Dsonar.test.inclusions=**/*.test.js,**/*.spec.js
             -Dsonar.coverage.exclusions=node_modules/**,coverage/**,tests/**,**/*.test.js,**/*.spec.js
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
 
       - name: Create deployment package
         run: |
@@ -77,13 +78,13 @@ jobs:
           STAGING="$GITHUB_WORKSPACE/deployment-package"
           rm -rf "$STAGING"
           mkdir -p "$STAGING"
-          [ -d public ] && cp -r public "$STAGING/" || echo "No public/ directory found"
-          [ -d node_modules ] && cp -r node_modules "$STAGING/" || echo "No node_modules/ directory found"
-          [ -f server.js ] && cp server.js "$STAGING/" || echo "No server.js found"
+          [ -d public ] && cp -r public "$STAGING/" || true
+          [ -d node_modules ] && cp -r node_modules "$STAGING/" || true
+          [ -f server.js ] && cp server.js "$STAGING/" || true
           cp package.json "$STAGING/"
-          cp package-lock.json "$STAGING/"
+          cp package-lock.json "$STAGING/" || true
           [ -f README.md ] && cp README.md "$STAGING/" || true
-          [ -f Dockerfile ] && cp Dockerfile "$STAGING/" || echo "No Dockerfile found"
+          [ -f Dockerfile ] && cp Dockerfile "$STAGING/" || true
           (cd "$STAGING" && npm pkg delete devDependencies || true)
           TS="$(date +%Y%m%d-%H%M%S)"
           SHORT_SHA="${GITHUB_SHA::7}"
@@ -97,6 +98,3 @@ jobs:
           name: deployment-package-node-${{ github.run_number }}
           path: ${{ env.ZIP_NAME }}
           retention-days: 90
-
-
-
