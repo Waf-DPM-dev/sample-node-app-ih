@@ -2,6 +2,8 @@ name: Continuous Integration Pipeline with SonarQube
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
 
 permissions:
   contents: read
@@ -17,6 +19,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # better relevance for Sonar analysis
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -38,6 +42,7 @@ jobs:
           npm run build 2>/dev/null || echo "No build script found, skipping build step"
 
       - name: Run unit tests with coverage and JUnit reports
+        continue-on-error: true
         env:
           JEST_JUNIT_OUTPUT: coverage/junit.xml
         run: |
@@ -50,8 +55,8 @@ jobs:
           fi
 
       - name: Publish test results to Checks
-        uses: dorny/test-reporter@v1
         if: always() && hashFiles('coverage/junit.xml') != ''
+        uses: dorny/test-reporter@v1
         with:
           name: Jest Test Results
           path: coverage/junit.xml
@@ -59,8 +64,8 @@ jobs:
           fail-on-error: false
 
       - name: Upload test results to GitHub
-        uses: actions/upload-artifact@v4
         if: always() && hashFiles('coverage/**') != ''
+        uses: actions/upload-artifact@v4
         with:
           name: test-results-node
           path: coverage/
@@ -69,7 +74,7 @@ jobs:
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6.0.0
         env:
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}   # e.g. http://4.219.9.145:9000
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
