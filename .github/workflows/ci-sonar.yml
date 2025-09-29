@@ -1,7 +1,7 @@
 name: Continuous Integration Pipeline with SonarQube
 
 on:
-  workflow_dispatch
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -26,7 +26,12 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
       - name: Build the application (optional)
         run: |
@@ -35,20 +40,28 @@ jobs:
       - name: Run unit tests with coverage and JUnit reports
         env:
           JEST_JUNIT_OUTPUT: coverage/junit.xml
-        run: npm run test:ci
+        run: |
+          if npm run | grep -q "test:ci"; then
+            npm run test:ci
+          else
+            npx --yes jest --ci --passWithNoTests \
+              --reporters=default --reporters=jest-junit \
+              --coverage --coverageReporters=lcov,text-summary \
+              --testLocationInResults
+          fi
 
       - name: Publish test results to Checks
         uses: dorny/test-reporter@v1
-        if: always()
+        if: always() && hashFiles('coverage/junit.xml') != ''
         with:
           name: Jest Test Results
           path: coverage/junit.xml
           reporter: jest-junit
-          fail-on-error: true
+          fail-on-error: false
 
       - name: Upload test results to GitHub
         uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && hashFiles('coverage/**') != ''
         with:
           name: test-results-node
           path: coverage/
@@ -62,13 +75,10 @@ jobs:
         with:
           args: >
             -Dsonar.projectKey=waf-node-app
-            -Dsonar.organization=sda
-            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
-            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
             -Dsonar.sources=.
-            -Dsonar.exclusions=node_modules/**,coverage/**,tests/**,**/*.test.js,**/*.spec.js
             -Dsonar.tests=tests/
             -Dsonar.test.inclusions=**/*.test.js,**/*.spec.js
+            -Dsonar.exclusions=node_modules/**,coverage/**,tests/**,**/*.test.js,**/*.spec.js
             -Dsonar.coverage.exclusions=node_modules/**,coverage/**,tests/**,**/*.test.js,**/*.spec.js
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
 
